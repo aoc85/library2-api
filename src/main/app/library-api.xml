@@ -25,6 +25,10 @@ http://www.springframework.org/schema/context http://www.springframework.org/sch
         <db:parameterized-query><![CDATA[delete from students where id = :id]]></db:parameterized-query>
         <db:in-param name="id" type="INTEGER" defaultValue="0"/>
     </db:template-query>
+    <db:template-query name="StudentsOrder" doc:name="Template Query">
+        <db:parameterized-query><![CDATA[select * from students order by name :direction]]></db:parameterized-query>
+        <db:in-param name="direction" type="OTHER" defaultValue="asc"/>
+    </db:template-query>
     <flow name="library-api-main">
         <http:listener config-ref="library-api-httpListenerConfig" path="/api/*" doc:name="HTTP"/>
         <apikit:router config-ref="library-api-config" doc:name="APIkit Router"/>
@@ -61,7 +65,6 @@ http://www.springframework.org/schema/context http://www.springframework.org/sch
         <set-payload value="{&#xA;      &quot;lateReturn&quot;: false&#xA;}" doc:name="Set Payload"/>
     </flow>
     <flow name="get:/books:library-api-config">
-        <logger message="&lt;&lt;&lt;&lt; query params #[message.inboundProperties['http.query.params']] &lt;&lt;&lt;&lt; query params" level="INFO" doc:name="Logger"/>
         <choice doc:name="Choice">
             <when expression="#[message.inboundProperties['http.query.params'].sortDirection =='asc']">
                 <db:select config-ref="MySQL_Configuration" doc:name="order asc">
@@ -88,9 +91,23 @@ http://www.springframework.org/schema/context http://www.springframework.org/sch
         <set-payload value="#[payload]" doc:name="Set Payload"/>
     </flow>
     <flow name="get:/students:library-api-config">
-        <db:select config-ref="MySQL_Configuration" doc:name="Database">
-            <db:parameterized-query><![CDATA[select * from students]]></db:parameterized-query>
-        </db:select>
+        <choice doc:name="Choice">
+            <when expression="#[message.inboundProperties['http.query.params'].name=='desc']">
+                <db:select config-ref="MySQL_Configuration" doc:name="select students order desc">
+                    <db:parameterized-query><![CDATA[select * from students order by name desc]]></db:parameterized-query>
+                </db:select>
+            </when>
+            <when expression="#[message.inboundProperties['http.query.params'].name=='asc']">
+                <db:select config-ref="MySQL_Configuration" doc:name="select students asc">
+                    <db:parameterized-query><![CDATA[select * from students order by name asc]]></db:parameterized-query>
+                </db:select>
+            </when>
+            <otherwise>
+                <db:select config-ref="MySQL_Configuration" doc:name="Database">
+                    <db:parameterized-query><![CDATA[select * from students]]></db:parameterized-query>
+                </db:select>
+            </otherwise>
+        </choice>
         <set-payload value="#[payload]" doc:name="Set Payload"/>
     </flow>
     <flow name="get:/books/{bookId}:library-api-config">
