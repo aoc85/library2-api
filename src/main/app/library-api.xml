@@ -1,23 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:context="http://www.springframework.org/schema/context" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:context="http://www.springframework.org/schema/context" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
-http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
     <http:listener-config name="library-api-httpListenerConfig" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
     <apikit:config name="library-api-config" raml="library-api.raml" consoleEnabled="false" doc:name="Router"/>
     <context:property-placeholder location="${mule.env}.properties, commons.properties"/>
     <db:mysql-config name="MySQL_Configuration" host="${mysql.host}" port="${mysql.port}" user="${mysql.user}" password="${mysql.password}" database="${mysql.database}" doc:name="MySQL Configuration"/>
-    <db:template-query name="books_id" doc:name="Template Query">
-        <db:parameterized-query><![CDATA[select * from books where id = :id]]></db:parameterized-query>
-        <db:in-param name="id" type="INTEGER" defaultValue="1"/>
-    </db:template-query>
-    <db:template-query name="DeleteBook" doc:name="Template Query">
-        <db:parameterized-query><![CDATA[delete from books where id = :id]]></db:parameterized-query>
-        <db:in-param name="id" type="INTEGER" defaultValue="0"/>
-    </db:template-query>
+    
     <db:template-query name="SelectStudentID" doc:name="Template Query">
         <db:parameterized-query><![CDATA[select * from students where id = :id]]></db:parameterized-query>
         <db:in-param name="id" type="INTEGER" defaultValue="1"/>
@@ -39,121 +33,11 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
         <http:listener config-ref="library-api-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
         <apikit:console config-ref="library-api-config" doc:name="APIkit Console"/>
     </flow>
-    <flow name="put:/books/{bookId}:application/json:library-api-config">
-        <set-payload value="{&#xA;  &quot;code&quot; : 1009,&#xA;  &quot;message&quot; : &quot;Recurso não encontrado&quot;,&#xA;  &quot;description&quot; : &quot;Aqui vão os detalhes do erro&quot;&#xA;}" doc:name="Set Payload"/>
-    </flow>
-    <flow name="put:/students/{studentId}/loans/{loanId}:application/json:library-api-config">
-        <set-payload value="{&#xA;  &quot;code&quot; : 1009,&#xA;  &quot;message&quot; : &quot;Recurso não encontrado&quot;,&#xA;  &quot;description&quot; : &quot;Aqui vão os detalhes do erro&quot;&#xA;}" doc:name="Set Payload"/>
-    </flow>
-    <flow name="put:/students/{studentId}:application/json:library-api-config">
-        <set-payload value="{&#xA;  &quot;code&quot; : 1009,&#xA;  &quot;message&quot; : &quot;Recurso não encontrado&quot;,&#xA;  &quot;description&quot; : &quot;Aqui vão os detalhes do erro&quot;&#xA;}" doc:name="Set Payload"/>
-    </flow>
-    <flow name="delete:/books/{bookId}:library-api-config">
-        <db:delete config-ref="MySQL_Configuration" doc:name="Database">
-            <db:template-query-ref name="DeleteBook"/>
-            <db:in-param name="id" type="INTEGER" value="#[flowVars.bookId]"/>
-        </db:delete>
-        <set-payload value="{&#xA;  &quot;code&quot; : 1001,&#xA;  &quot;message&quot; : &quot;Ocorreu um erro no servidor&quot;,&#xA;  &quot;description&quot; : &quot;Aqui vão os detalhes do erro&quot;&#xA;}" doc:name="Set Payload"/>
-    </flow>
-    <flow name="delete:/students/{studentId}:library-api-config">
-        <db:delete config-ref="MySQL_Configuration" doc:name="Database">
-            <db:template-query-ref name="DeleteStudent"/>
-            <db:in-param name="id" type="INTEGER" value="#[flowVars.studentId]"/>
-        </db:delete>
-        <set-payload value="{&#xA;  &quot;code&quot; : 1003,&#xA;  &quot;message&quot; : &quot;Acesso não autorizado&quot;,&#xA;  &quot;description&quot; : &quot;Aqui vão os detalhes do erro&quot;&#xA;}" doc:name="Set Payload"/>
-    </flow>
-    <flow name="patch:/students/{studentId}/loans/{loanId}:application/json:library-api-config">
-        <set-payload value="{&#xA;      &quot;lateReturn&quot;: false&#xA;}" doc:name="Set Payload"/>
-    </flow>
-    <flow name="get:/books:library-api-config">
-        <choice doc:name="Choice">
-            <when expression="#[message.inboundProperties['http.query.params'].sortDirection =='asc']">
-                <db:select config-ref="MySQL_Configuration" doc:name="order asc">
-                    <db:parameterized-query><![CDATA[select * from books order by title asc]]></db:parameterized-query>
-                </db:select>
-            </when>
-            <when expression="#[message.inboundProperties['http.query.params'].sortDirection =='desc']">
-                <db:select config-ref="MySQL_Configuration" doc:name="order desc">
-                    <db:parameterized-query><![CDATA[select * from books order by title desc]]></db:parameterized-query>
-                </db:select>
-            </when>
-            <otherwise>
-                <db:select config-ref="MySQL_Configuration" doc:name="Database">
-                    <db:parameterized-query><![CDATA[select * from books]]></db:parameterized-query>
-                </db:select>
-            </otherwise>
-        </choice>
-        <set-payload value="#[payload]" doc:name="Set Payload"/>
-    </flow>
-    <flow name="get:/students/{studentId}/loans:library-api-config">
-        <db:select config-ref="MySQL_Configuration" doc:name="Database">
-            <db:parameterized-query><![CDATA[SELECT * FROM students]]></db:parameterized-query>
-        </db:select>
-        <set-payload value="#[payload]" doc:name="Set Payload"/>
-    </flow>
-    <flow name="get:/students:library-api-config">
-        <choice doc:name="Choice">
-            <when expression="#[message.inboundProperties['http.query.params'].name=='desc']">
-                <db:select config-ref="MySQL_Configuration" doc:name="select students order desc">
-                    <db:parameterized-query><![CDATA[select * from students order by name desc]]></db:parameterized-query>
-                </db:select>
-            </when>
-            <when expression="#[message.inboundProperties['http.query.params'].name=='asc']">
-                <db:select config-ref="MySQL_Configuration" doc:name="select students asc">
-                    <db:parameterized-query><![CDATA[select * from students order by name asc]]></db:parameterized-query>
-                </db:select>
-            </when>
-            <otherwise>
-                <db:select config-ref="MySQL_Configuration" doc:name="Database">
-                    <db:parameterized-query><![CDATA[select * from students]]></db:parameterized-query>
-                </db:select>
-            </otherwise>
-        </choice>
-        <set-payload value="#[payload]" doc:name="Set Payload"/>
-    </flow>
-    <flow name="get:/books/{bookId}:library-api-config">
-        <db:select config-ref="MySQL_Configuration" doc:name="Database">
-            <db:template-query-ref name="books_id"/>
-            <db:in-param name="id" type="INTEGER" value="#[flowVars.bookId]"/>
-        </db:select>
-        <validation:validate-size exceptionClass="org.mule.module.apikit.exception.NotFoundException" value="#[payload]" min="1" doc:name="Validation"/>
-        <set-payload value="#[payload.get(0)]" doc:name="Set Payload"/>
-    </flow>
-    <flow name="get:/students/{studentId}/loans/{loanId}:library-api-config">
-        <set-payload value="{&#xA;      &quot;isbn&quot;: &quot;978-1-56619-909-4&quot;,&#xA;      &quot;loanDate&quot;: &quot;2018-01-09&quot;,&#xA;      &quot;returnDate&quot;: &quot;2018-01-19&quot;,&#xA;      &quot;effectiveReturnDate&quot;: &quot;2018-01-17&quot;,&#xA;      &quot;lateReturn&quot;: false&#xA;}" doc:name="Set Payload"/>
-    </flow>
-    <flow name="get:/students/{studentId}:library-api-config">
-        <db:select config-ref="MySQL_Configuration" doc:name="Database">
-            <db:template-query-ref name="SelectStudentID"/>
-            <db:in-param name="id" type="INTEGER" value="#[flowVars.studentId]"/>
-        </db:select>
-        <validation:validate-size exceptionClass="org.mule.module.apikit.exception.NotFoundException" value="#[payload]" min="1" doc:name="Validate not empty"/>
-        <set-payload value="#[payload.get(0)]" doc:name="Set Payload"/>
-    </flow>
-    <flow name="post:/books:application/json:library-api-config">
-        <db:insert config-ref="MySQL_Configuration" doc:name="Database" autoGeneratedKeys="true">
-            <db:parameterized-query><![CDATA[insert into books
-	(title, category, isbn, publisher, author)
-values
-	 (#[json:/title], #[json:/category], #[json:/isbn], #[json:/publisher], #[json:/author])]]></db:parameterized-query>
-        </db:insert>
-        <set-property doc:name="Set Header" propertyName="Location" value="http://localhost:${http.port}/api/books/#[payload.get(0).get(&quot;GENERATED_KEY&quot;)]"/>        
-    </flow>
-    <flow name="post:/students/{studentId}/loans:application/json:library-api-config">
-        <set-payload value="{&#xA;  &quot;code&quot; : 1003,&#xA;  &quot;message&quot; : &quot;Acesso não autorizado&quot;,&#xA;  &quot;description&quot; : &quot;Aqui vão os detalhes do erro&quot;&#xA;}" doc:name="Set Payload"/>
-    </flow>
-    <flow name="post:/students:application/json:library-api-config">
-        <db:insert config-ref="MySQL_Configuration" autoGeneratedKeys="true" doc:name="Database">
-            <db:parameterized-query><![CDATA[insert into students(phone, registration, email, name)
-	 VALUES(#[json:/phone], #[json:/registration], #[json:/email], #[json:/name])]]></db:parameterized-query>
-        </db:insert>
-        <set-property propertyName="Location" value="http://${http.host}:${http.port}/students/#[payload.get(0).get(&quot;GENERATED_KEY&quot;)]" doc:name="Header"/>
-    </flow>
     <apikit:mapping-exception-strategy name="library-api-apiKitGlobalExceptionMapping">
         <apikit:mapping statusCode="404">
             <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
             <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload"/>
+            <set-payload value="{ &quot;message&quot;: &quot;#[exception.getMessage()]&quot; }" doc:name="Set Payload"/>
         </apikit:mapping>
         <apikit:mapping statusCode="405">
             <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
@@ -169,6 +53,11 @@ values
             <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
             <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
             <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="409">
+            <apikit:exception value="java.sql.SQLIntegrityConstraintViolationException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;SQL Conflict&quot; }" doc:name="Set Payload" mimeType="application/json"/>
         </apikit:mapping>
         <apikit:mapping statusCode="400">
             <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />

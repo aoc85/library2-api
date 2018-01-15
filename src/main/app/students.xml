@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:json="http://www.mulesoft.org/schema/mule/json"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<flow name="put:/students/{studentId}/loans/{loanId}:application/json:library-api-config">
+        <set-property propertyName="lateReturn" value="#[json:/lateReturn]" doc:name="Set Late Return"/>
+        <db:update config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[update loans 
+	set effectiveReturnDate = #[json:/effectiveReturnDate],
+        studentRegistration = #[json:/studentRegistration],
+        loanDate = #[json:/loanDate],
+        lateReturn = #[flowVars.lateReturn == true ? 1 : 0],
+        isbn = #[json:/isbn],
+        returnDate =  #[json:/returnDate]     
+    where 
+    	id = #[json:/id]]]></db:parameterized-query>
+        </db:update>
+        <set-payload value="#[payload]" doc:name="Set Payload"/>
+    </flow>
+    <flow name="put:/students/{studentId}:application/json:library-api-config">
+        <db:update config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[update students
+	set
+		phone = #[json:/phone],
+		registration = #[json:/registration],
+		email = #[json:/email],
+		name = #[json:/name] 		
+	where
+		id = #[json:/id]]]></db:parameterized-query>
+        </db:update>
+        <validation:is-true exceptionClass="org.mule.module.apikit.exception.NotFoundException" expression="#[payload != false]" doc:name="Validation"/>
+        <set-payload value="{&#xA;  &quot;code&quot; : 1009,&#xA;  &quot;message&quot; : &quot;Recurso não encontrado&quot;,&#xA;  &quot;description&quot; : &quot;Aqui vão os detalhes do erro&quot;&#xA;}" doc:name="Set Payload"/>
+    </flow>
+    
+    <flow name="delete:/students/{studentId}:library-api-config">
+        <db:delete config-ref="MySQL_Configuration" doc:name="Database">
+            <db:template-query-ref name="DeleteStudent"/>
+            <db:in-param name="id" type="INTEGER" value="#[flowVars.studentId]"/>
+        </db:delete>
+        <validation:is-true message="404" exceptionClass="org.mule.module.apikit.exception.NotFoundException" expression="#[payload != false]" doc:name="Validation"/>
+        <set-payload value="{&#xA;  &quot;code&quot; : 1003,&#xA;  &quot;message&quot; : &quot;Acesso não autorizado&quot;,&#xA;  &quot;description&quot; : &quot;Aqui vão os detalhes do erro&quot;&#xA;}" doc:name="Set Payload"/>
+    </flow>
+    <flow name="patch:/students/{studentId}/loans/{loanId}:application/json:library-api-config">
+        <set-payload value="{&#xA;      &quot;lateReturn&quot;: false&#xA;}" doc:name="Set Payload"/>
+    </flow>
+    
+    <flow name="get:/students/{studentId}/loans:library-api-config">
+        <db:select config-ref="MySQL_Configuration" doc:name="Select Loans">
+            <db:parameterized-query><![CDATA[SELECT * FROM loans;]]></db:parameterized-query>
+        </db:select>
+        <set-payload value="{ students: #[payload] }" doc:name="Payload Estudantes"/>
+    </flow>
+    <flow name="get:/students:library-api-config">
+        <choice doc:name="Choice">
+            <when expression="#[message.inboundProperties['http.query.params'].name=='desc']">
+                <db:select config-ref="MySQL_Configuration" doc:name="select students order desc">
+                    <db:parameterized-query><![CDATA[select * from students order by name desc]]></db:parameterized-query>
+                </db:select>
+            </when>
+            <when expression="#[message.inboundProperties['http.query.params'].name=='asc']">
+                <db:select config-ref="MySQL_Configuration" doc:name="select students asc">
+                    <db:parameterized-query><![CDATA[select * from students order by name asc]]></db:parameterized-query>
+                </db:select>
+            </when>
+            <otherwise>
+                <db:select config-ref="MySQL_Configuration" doc:name="Database">
+                    <db:parameterized-query><![CDATA[select * from students]]></db:parameterized-query>
+                </db:select>
+            </otherwise>
+        </choice>
+        <json:object-to-json-transformer mimeType="application/json" doc:name="Object to JSON"/>
+        <set-payload value="{ students: #[payload] } " doc:name="Set Payload" mimeType="application/json"/>
+    </flow>
+  
+    <flow name="get:/students/{studentId}/loans/{loanId}:library-api-config">
+        <db:select config-ref="MySQL_Configuration" doc:name="Select Loans">
+            <db:parameterized-query><![CDATA[SELECT l.* FROM loans l LEFT JOIN students s ON s.id = #[flowVars.studentId] WHERE l.studentRegistration = s.registration]]></db:parameterized-query>
+        </db:select>
+        <set-payload value="#[payload]" doc:name="Set Payload"/>
+    </flow>
+    <flow name="get:/students/{studentId}:library-api-config">
+        <db:select config-ref="MySQL_Configuration" doc:name="Database">
+            <db:template-query-ref name="SelectStudentID"/>
+            <db:in-param name="id" type="INTEGER" value="#[flowVars.studentId]"/>
+        </db:select>
+        <validation:validate-size exceptionClass="org.mule.module.apikit.exception.NotFoundException" value="#[payload]" min="1" doc:name="Validate not empty"/>
+        <set-payload value="#[payload.get(0)]" doc:name="Set Payload"/>
+    </flow>
+    <flow name="post:/students:application/json:library-api-config">
+        <db:insert config-ref="MySQL_Configuration" autoGeneratedKeys="true" doc:name="Database">
+            <db:parameterized-query><![CDATA[insert into students(phone, registration, email, name)
+	 VALUES(#[json:/phone], #[json:/registration], #[json:/email], #[json:/name])]]></db:parameterized-query>
+        </db:insert>
+        <set-property propertyName="Location" value="http://${http.host}:${http.port}/students/#[payload.get(0).get(&quot;GENERATED_KEY&quot;)]" doc:name="Header"/>
+    </flow>
+    <flow name="post:/students/{studentId}/loans:application/json:library-api-config">
+        <db:insert config-ref="MySQL_Configuration" autoGeneratedKeys="true" doc:name="Database">
+            <db:parameterized-query><![CDATA[insert into loans(
+        effectiveReturnDate,
+        studentRegistration,
+        loanDate,
+        isbn,
+        returnDate 
+        )
+  values ( 
+  		#[json:/effectiveReturnDate],
+	  	(SELECT registration FROM students WHERE id = #[flowVars.studentId]),
+	  	#[json:/loanDate],
+	  	#[json:/isbn],
+	  	#[json:/returnDate]
+  	)]]></db:parameterized-query>
+        </db:insert>
+        <set-property propertyName="Location" value="${http.host}:${http.port}/students/#[flowVars.studentId]/loans/#[payload.get(0).get(&quot;GENERATED_KEY&quot;)]" doc:name="Return Location"/>
+    </flow>
+
+</mule>
