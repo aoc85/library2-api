@@ -3,7 +3,10 @@ usage:
 
 types: 
   Student:
-    properties: 
+    properties:
+      id?:
+        type: number
+        description: Identificador único do aluno  
       name?:
         type: string
         description: O nome completo do aluno
@@ -23,7 +26,10 @@ types:
         description: A coleção de alunos
 
   Book:
-    properties: 
+    properties:
+      id?:
+        type: number
+        description: Identificador único do livro
       title?:
         type: string
         description: O título do livro
